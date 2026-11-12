@@ -3,6 +3,8 @@
 # Weapon Tiers
 A mod for SULFUR that adds 4 new weapon tiers that can randomly roll on weapon drops, granting them multipliers for various weapon stats!
 
+<img width="394" height="546" alt="image" src="https://github.com/user-attachments/assets/42c62cd4-3c9a-42b3-8c8f-4004dc4c33c8" />
+
 ## Tiers
 
 | Tier | Damage | Fire rate | Reload speed | Max durability | Default chance |
