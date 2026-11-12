@@ -1,3 +1,4 @@
+
 <img width="256" height="256" alt="icon" src="https://github.com/user-attachments/assets/bca47f01-a5dc-4f9d-a297-855e1a130c72" />
 
 # Weapon Tiers
@@ -13,13 +14,21 @@ Melee weapons have not been tested at the time of writing, although they should 
 
 ## Tiers
 
-| Tier | Damage | Fire rate | Reload speed | Max durability | Default chance |
+| Tier | Damage (Firearms and melee) | Fire rate (Firearms) | Reload speed (Firearms) | Max durability (Firearms) | Default chance |
 |---|---:|---:|---:|---:|---:|
-| Standard | x1 | x1 | x1 | x1 | 70% |
+| Standard (Normal drops) | x1 | x1 | x1 | x1 | 70% |
 | Blessed | x1.25 | x1.05 | x1.05 | x1.10 | 20% |
 | Hallowed | x1.50 | x1.10 | x1.10 | x1.20 | 7% |
 | Sacred | x1.75 | x1.15 | x1.15 | x1.35 | 2.5% |
 | Divine | x2 | x1.20 | x1.20 | x1.50 | 0.5% |
+
+The tier system does NOT apply to throwables! 
+
+The tier system does apply to melee weapons, but they only receive the damage bonus! 
+
+Tiered weapons have colored tier names, tooltip bonuses, and an animated shimmer effect so you can differentiate them easily from normal weapons. Standard weapons keep their vanilla appearance!
+
+Buying weapons from shops does not grant tiers, only naturally dropped weapon pickups!
 
 ## Requirements/installation
 
