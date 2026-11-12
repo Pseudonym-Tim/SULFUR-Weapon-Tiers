@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.CompilerServices;
+using PerfectRandom.Sulfur.Core.Items;
 using System.Globalization;
 using System.Linq;
 using PerfectRandom.Sulfur.Core.CharacterStats;
@@ -75,6 +77,54 @@ namespace SulfurWeaponTiers
             1.50f 
         };
 
+        private static readonly ConditionalWeakTable<ItemStats, WeaponSO> Definitions = new ConditionalWeakTable<ItemStats, WeaponSO>();
+
+        public static bool Supports(WeaponSO weapon)
+        {
+            return weapon != null && !weapon.IsThrowable;
+        }
+
+        public static void Register(ItemStats stats, ItemDefinition item)
+        {
+            Definitions.Remove(stats);
+
+            if(item is WeaponSO weapon)
+            {
+                Definitions.Add(stats, weapon);
+            }
+        }
+
+        public static bool AppliesTo(WeaponSO weapon, ItemStats stats, ItemAttributes attribute)
+        {
+            if(!Supports(weapon) || stats.itemAttributes[(int)attribute] == null || stats.itemAttributes[(int)attribute].BaseValue <= 0f)
+            {
+                return false;
+            }
+            switch(attribute)
+            {
+                case ItemAttributes.Damage:
+                {
+                    return true;
+                }
+                case ItemAttributes.RPM:
+                {
+                    return !weapon.IsMelee;
+                }
+                case ItemAttributes.ReloadSpeed:
+                {
+                    return !weapon.IsMelee && weapon.reloadWithButton;
+                }
+                case ItemAttributes.MaxDurability:
+                {
+                    return weapon.HasDurability;
+                }
+                default:
+                {
+                    return false;
+                }
+            }
+        }
+
         public static int Roll(double sample, double[] weights)
         {
             if(weights.Length != 5 || weights.Any(w => double.IsNaN(w) || double.IsInfinity(w) || w < 0) || weights.Sum() <= 0)
@@ -106,7 +156,12 @@ namespace SulfurWeaponTiers
 
         public static int Read(ItemStats stats)
         {
-            return stats == null ? 0 : Read(stats.itemAttributes[(int)ItemAttributes.Damage]);
+            if(stats == null || (Definitions.TryGetValue(stats, out WeaponSO weapon) && !Supports(weapon)))
+            {
+                return 0;
+            }
+
+            return Read(stats.itemAttributes[(int)ItemAttributes.Damage]);
         }
 
         private static bool IsMarker(ItemAttributeData data)
@@ -206,7 +261,14 @@ namespace SulfurWeaponTiers
 
             // Strip old bonus first, repeated updates would stack obviously...
             characterStat.RemoveAllModifiersFromSource(Source);
-            float factor = Factor(attribute, tier);
+            bool isKnownWeapon = Definitions.TryGetValue(stats, out WeaponSO weapon);
+
+            if(isKnownWeapon && !Supports(weapon))
+            {
+                return;
+            }
+
+            float factor = isKnownWeapon && !AppliesTo(weapon, stats, attribute) ? 1f : Factor(attribute, tier);
 
             if(factor != 1f || attribute == ItemAttributes.Damage)
             {

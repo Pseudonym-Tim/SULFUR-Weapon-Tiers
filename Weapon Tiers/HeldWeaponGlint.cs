@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -39,9 +40,9 @@ namespace SulfurWeaponTiers
                     continue;
                 }
 
-                SkinnedMeshRenderer skin = renderer as SkinnedMeshRenderer;
+                SkinnedMeshRenderer skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
                 MeshFilter filter = renderer.GetComponent<MeshFilter>();
-                Mesh mesh = skin != null ? skin.sharedMesh : filter != null ? filter.sharedMesh : null;
+                Mesh mesh = skinnedMeshRenderer != null ? skinnedMeshRenderer.sharedMesh : filter != null ? filter.sharedMesh : null;
 
                 if(mesh != null)
                 {
@@ -51,6 +52,26 @@ namespace SulfurWeaponTiers
 
             material.SetFloat("_UseAlpha", 0f);
             material.SetFloat("_HeldGlint", 1f);
+        }
+
+        internal static List<Renderer> FindMeleeRenderers(GameObject model)
+        {
+            List<Renderer> renderersList = new List<Renderer>();
+
+            foreach(Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                Material material = renderer.sharedMaterial;
+
+                // Several melee models share the world shader with hands, so shader filtering loses the weapon...
+                bool isHands = material != null && (material.name == "Hands" || material.name.StartsWith("Hands ", StringComparison.Ordinal));
+
+                if((renderer is MeshRenderer || renderer is SkinnedMeshRenderer) && material != null && !isHands)
+                {
+                    renderersList.Add(renderer);
+                }
+            }
+
+            return renderersList;
         }
 
         internal void Draw(CommandBuffer commands, int layerMask, uint renderingLayer)

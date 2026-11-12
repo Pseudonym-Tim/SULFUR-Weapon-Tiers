@@ -105,7 +105,7 @@ namespace SulfurWeaponTiers
         internal static void ApplyPickup(Pickup pickup)
         {
             PickupWeaponGlint pickupWeaponGlint = pickup.GetComponent<PickupWeaponGlint>();
-            int tier = pickup.ItemSO is WeaponSO ? WeaponTierSystem.Read(pickup.inventoryData?.attributes) : 0;
+            int tier = pickup.ItemSO is WeaponSO definition && WeaponTierSystem.Supports(definition) ? WeaponTierSystem.Read(pickup.inventoryData?.attributes) : 0;
 
             if(isReady && tier > 0 && pickupWeaponGlint == null)
             {
@@ -121,7 +121,7 @@ namespace SulfurWeaponTiers
         internal static void ApplyHeld(Weapon weapon)
         {
             HeldWeaponGlint heldWeaponGlint = weapon.GetComponent<HeldWeaponGlint>();
-            int tier = weapon.inventoryItem == null ? 0 : WeaponTierSystem.Read(weapon.inventoryItem.stats);
+            int tier = !WeaponTierSystem.Supports(weapon.weaponDefinition) || weapon.inventoryItem == null ? 0 : WeaponTierSystem.Read(weapon.inventoryItem.stats);
 
             if(isReady && tier > 0 && heldWeaponGlint == null)
             {
@@ -130,7 +130,15 @@ namespace SulfurWeaponTiers
 
             if(heldWeaponGlint != null)
             {
-                heldWeaponGlint.Configure(tier, weapon.meshRenderersInWeapon);
+                IList<Renderer> renderers = weapon.meshRenderersInWeapon;
+
+                if(weapon.IsMelee && tier > 0)
+                {
+                    // Melee prefabs leave weaponRendererParent empty, find weapon materials without coating hands...
+                    renderers = HeldWeaponGlint.FindMeleeRenderers(weapon.gameObject);
+                }
+
+                heldWeaponGlint.Configure(tier, renderers);
             }
         }
 
@@ -144,7 +152,7 @@ namespace SulfurWeaponTiers
             }
 
             HeldWeaponGlint heldWeaponGlint = weapon.GetComponent<HeldWeaponGlint>();
-            int tier = weapon.inventoryItem == null ? 0 : WeaponTierSystem.Read(weapon.inventoryItem.stats);
+            int tier = !WeaponTierSystem.Supports(weapon.weaponDefinition) || weapon.inventoryItem == null ? 0 : WeaponTierSystem.Read(weapon.inventoryItem.stats);
 
             if(tier == 0)
             {
@@ -171,7 +179,7 @@ namespace SulfurWeaponTiers
         internal static void ApplyInventory(InventoryItem item, Image artwork)
         {
             InventoryTierGlint inventoryTierGlint = item.GetComponent<InventoryTierGlint>();
-            int tier = item.weaponDefinition == null ? 0 : WeaponTierSystem.Read(item.stats);
+            int tier = !WeaponTierSystem.Supports(item.weaponDefinition) ? 0 : WeaponTierSystem.Read(item.stats);
 
             if(isReady && tier > 0 && artwork != null && inventoryTierGlint == null)
             {

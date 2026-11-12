@@ -6,6 +6,7 @@ using BepInEx;
 using HarmonyLib;
 using PerfectRandom.Sulfur.Core;
 using PerfectRandom.Sulfur.Core.Items;
+using PerfectRandom.Sulfur.Core.Weapons;
 using PerfectRandom.Sulfur.Core.Stats;
 using PerfectRandom.Sulfur.Core.UI.ItemDescription;
 using TMPro;
@@ -83,7 +84,7 @@ namespace SulfurWeaponTiers
 
         static void Postfix(Pickup __instance, ItemDefinition item, InventoryData _inventoryData)
         {
-            if(!(item is WeaponSO weapon))
+            if(!(item is WeaponSO weapon) || !WeaponTierSystem.Supports(weapon))
             {
                 TierGlint.ApplyPickup(__instance);
                 return;
@@ -129,6 +130,15 @@ namespace SulfurWeaponTiers
             }
 
             TierGlint.ApplyPickup(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(ItemStats), nameof(ItemStats.SetBaseAttributes), new Type[] { typeof(ItemDefinition) })]
+    internal static class WeaponDefinitionPatch
+    {
+        static void Postfix(ItemStats __instance, ItemDefinition itemDefinition)
+        {
+            WeaponTierSystem.Register(__instance, itemDefinition);
         }
     }
 
@@ -226,8 +236,8 @@ namespace SulfurWeaponTiers
 
             WeaponSO weaponScriptable = ___inventoryRepresentation.weaponDefinition;
 
-            // Regular guns already get these rows before condition, melee and throwables need this fallback...
-            if(__originalMethod.Name == "AddFlavorText" && !weaponScriptable.IsMelee && !weaponScriptable.IsThrowable)
+            // Melee skips the condition row, so add its bonuses before flavor text instead...
+            if(!WeaponTierSystem.Supports(weaponScriptable) || (__originalMethod.Name == "AddFlavorText") != weaponScriptable.IsMelee)
             {
                 return;
             }
@@ -239,17 +249,38 @@ namespace SulfurWeaponTiers
                 return;
             }
 
-            // Insert before the condition row, (let vanilla clean up pooled text...)
-            AddBonus(__instance, "Tier damage", ItemAttributes.Damage, tier, ref childIndex);
-            AddBonus(__instance, "Tier fire rate", ItemAttributes.RPM, tier, ref childIndex);
-            AddBonus(__instance, "Tier reload speed", ItemAttributes.ReloadSpeed, tier, ref childIndex);
-            AddBonus(__instance, "Tier max durability", ItemAttributes.MaxDurability, tier, ref childIndex);
+            ItemStats itemStats = ___inventoryRepresentation.stats;
+
+            if(WeaponTierSystem.AppliesTo(weaponScriptable, itemStats, ItemAttributes.Damage))
+            {
+                AddBonus(__instance, "Tier damage", WeaponTierSystem.ColoredMultiplier(ItemAttributes.Damage, tier), tier, ref childIndex);
+            }
+
+            if(weaponScriptable.IsMelee)
+            {
+                return;
+            }
+
+            if(WeaponTierSystem.AppliesTo(weaponScriptable, itemStats, ItemAttributes.RPM))
+            {
+                AddBonus(__instance, "Tier fire rate", WeaponTierSystem.ColoredMultiplier(ItemAttributes.RPM, tier), tier, ref childIndex);
+            }
+
+            if(WeaponTierSystem.AppliesTo(weaponScriptable, itemStats, ItemAttributes.ReloadSpeed))
+            {
+                AddBonus(__instance, "Tier reload speed", WeaponTierSystem.ColoredMultiplier(ItemAttributes.ReloadSpeed, tier), tier, ref childIndex);
+            }
+
+            if(WeaponTierSystem.AppliesTo(weaponScriptable, itemStats, ItemAttributes.MaxDurability))
+            {
+                AddBonus(__instance, "Tier max durability", WeaponTierSystem.ColoredMultiplier(ItemAttributes.MaxDurability, tier), tier, ref childIndex);
+            }
         }
 
-        private static void AddBonus(ItemDescription description, string label, ItemAttributes attribute, int tier, ref int childIndex)
+        private static void AddBonus(ItemDescription description, string label, string multiplier, int tier, ref int childIndex)
         {
             string coloredLabel = $"<color=#{ WeaponTierSystem.Colors[tier] }>{ label }:</color>";
-            object[] arguments = { coloredLabel, childIndex, WeaponTierSystem.ColoredMultiplier(attribute, tier), "", true };
+            object[] arguments = { coloredLabel, childIndex, multiplier, "", true };
             AddAttribute.Invoke(description, arguments);
             childIndex = (int)arguments[1];
         }
@@ -260,7 +291,7 @@ namespace SulfurWeaponTiers
     {
         static void Postfix(InventoryItem inventoryItem, TextMeshProUGUI ___titleTextFull, TextMeshProUGUI ___titleTextShort)
         {
-            int tier = WeaponTierSystem.Read(inventoryItem.stats);
+            int tier = WeaponTierSystem.Supports(inventoryItem.weaponDefinition) ? WeaponTierSystem.Read(inventoryItem.stats) : 0;
 
             if(tier == 0)
             {
