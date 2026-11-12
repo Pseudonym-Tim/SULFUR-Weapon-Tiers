@@ -5,6 +5,12 @@ A mod for SULFUR that adds 4 new weapon tiers that can randomly roll on weapon d
 
 <img width="394" height="546" alt="image" src="https://github.com/user-attachments/assets/42c62cd4-3c9a-42b3-8c8f-4004dc4c33c8" />
 
+Tiered weapons have colored names, tooltip bonuses, and an animated shimmer effect so you can differentiate them easily from normal weapons. Standard weapons keep their vanilla appearance!
+
+Buying weapons from shops does not grant tiers, only naturally dropped weapon pickups!
+
+Melee weapons have not been tested at the time of writing, although they should function just fine!
+
 ## Tiers
 
 | Tier | Damage | Fire rate | Reload speed | Max durability | Default chance |
@@ -14,12 +20,6 @@ A mod for SULFUR that adds 4 new weapon tiers that can randomly roll on weapon d
 | Hallowed | x1.50 | x1.10 | x1.10 | x1.20 | 7% |
 | Sacred | x1.75 | x1.15 | x1.15 | x1.35 | 2.5% |
 | Divine | x2 | x1.20 | x1.20 | x1.50 | 0.5% |
-
-Tiered weapons have colored names, tooltip bonuses, and an animated shimmer effect so you can differentiate them easily from normal weapons. Standard weapons keep their vanilla appearance!
-
-Buying weapons from shops does not grant tiers, only naturally dropped weapon pickups!
-
-Melee weapons have not been tested at the time of writing, although they should function just fine!
 
 ## Requirements/installation
 
