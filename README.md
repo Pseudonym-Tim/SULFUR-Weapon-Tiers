@@ -5,7 +5,7 @@ A mod for SULFUR that adds 4 new weapon tiers that can randomly roll on weapon d
 
 <img width="394" height="546" alt="image" src="https://github.com/user-attachments/assets/42c62cd4-3c9a-42b3-8c8f-4004dc4c33c8" />
 
-Tiered weapons have colored names, tooltip bonuses, and an animated shimmer effect so you can differentiate them easily from normal weapons. Standard weapons keep their vanilla appearance!
+Tiered weapons have colored tier names, tooltip bonuses, and a animated shimmer effect so you can differentiate them easily from normal weapons. Standard weapons keep their vanilla appearance!
 
 Buying weapons from shops does not grant tiers, only naturally dropped weapon pickups!
 
