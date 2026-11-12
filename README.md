@@ -19,6 +19,8 @@ Tiered weapons have colored names, tooltip bonuses, and an animated shimmer effe
 
 Buying weapons from shops does not grant tiers, only naturally dropped weapon pickups!
 
+Melee weapons have not been tested at the time of writing, although they should function just fine!
+
 ## Requirements/installation
 
 Requires BepInEx 5
