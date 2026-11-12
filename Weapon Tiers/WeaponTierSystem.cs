@@ -100,6 +100,7 @@ namespace SulfurWeaponTiers
             {
                 return false;
             }
+
             switch(attribute)
             {
                 case ItemAttributes.Damage:

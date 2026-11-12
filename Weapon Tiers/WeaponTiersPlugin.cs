@@ -22,7 +22,7 @@ namespace SulfurWeaponTiers
     public sealed class WeaponTiersPlugin : BaseUnityPlugin
     {
         public const string ModName = "Weapon Tiers";
-        public const string ModVersion = "1.0.0";
+        public const string ModVersion = "1.1.0";
 
         internal static double[] Weights = WeaponTierSystem.DefaultWeights;
         private Harmony harmony;
@@ -58,11 +58,11 @@ namespace SulfurWeaponTiers
             {
                 harmony.UnpatchSelf();
                 TierGlint.Shutdown();
-                Logger.LogError($"{ModName} couldn't patch this game version, all patches removed!" + ex);
+                Logger.LogError($"{ ModName } couldn't patch this game version, all patches removed!" + ex);
                 return;
             }
 
-            Logger.LogInfo($"{ModName} v{ModVersion} loaded!");
+            Logger.LogInfo($"{ ModName } { ModVersion } loaded!");
         }
 
         private void Update()
