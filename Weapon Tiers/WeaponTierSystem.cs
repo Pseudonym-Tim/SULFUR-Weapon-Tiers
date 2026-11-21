@@ -1,4 +1,5 @@
 using System;
+using PerfectRandom.Sulfur.Core;
 using System.Runtime.CompilerServices;
 using PerfectRandom.Sulfur.Core.Items;
 using System.Globalization;
@@ -20,16 +21,16 @@ namespace SulfurWeaponTiers
             "Blessed",
             "Hallowed",
             "Sacred",
-            "Divine"
+            "Holy"
         };
 
         public static readonly string[] Colors =
         {
             "FFFFFF",
-            "469247",
-            "48CAE4",
-            "EC78CB",
-            "FFD700"
+            "87AF6C",
+            "9AB5C1",
+            "7E709B",
+            "CE7D88"
         };
 
         public static readonly double[] DefaultWeights =
@@ -77,11 +78,30 @@ namespace SulfurWeaponTiers
             1.50f 
         };
 
+        public static readonly float[] PriceMultipliers =
+        {
+            1f,
+            1.10f,
+            1.20f,
+            1.30f,
+            1.40f
+        };
+
         private static readonly ConditionalWeakTable<ItemStats, WeaponSO> Definitions = new ConditionalWeakTable<ItemStats, WeaponSO>();
 
         public static bool Supports(WeaponSO weapon)
         {
             return weapon != null && !weapon.IsThrowable;
+        }
+
+        public static InventoryData CreateTieredWeaponData(WeaponSO weapon, int tier)
+        {
+            ItemStats stats = new ItemStats();
+            stats.SetBaseAttributes(weapon);
+            Apply(stats, tier);
+
+            int ammo = weapon.startsEmpty ? 0 : weapon.iAmmoMax;
+            return new InventoryData(weapon.id, 0, 0, 1, ammo, weapon.caliber, stats.SerializedAttributeData(), Array.Empty<ItemId>(), Array.Empty<ItemId>(), 0, weapon.inventorySize.x, weapon.inventorySize.y);
         }
 
         public static void Register(ItemStats stats, ItemDefinition item)
@@ -236,6 +256,24 @@ namespace SulfurWeaponTiers
             // Use actual stat multiplier so tooltip never makes up different bonus...
             string multiplier = Factor(attribute, tier).ToString("0.##", CultureInfo.InvariantCulture);
             return $"<color=#{ Colors[tier] }>x{ multiplier }</color>";
+        }
+
+        public static int ScalePrice(int price, int tier)
+        {
+            if(tier == 0 || price <= 0)
+            {
+                return price;
+            }
+
+            float multiplier = PriceMultipliers[tier];
+
+            if((double)price * multiplier >= int.MaxValue)
+            {
+                return int.MaxValue;
+            }
+
+            // (Decimal keeps float noise from sneaking an extra coin onto whole prices...)
+            return (int)Math.Ceiling(price * (decimal)multiplier);
         }
 
         public static void Apply(ItemStats stats, int tier)

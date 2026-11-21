@@ -22,14 +22,14 @@ namespace SulfurWeaponTiers
     public sealed class WeaponTiersPlugin : BaseUnityPlugin
     {
         public const string ModName = "Weapon Tiers";
-        public const string ModVersion = "1.1.0";
+        public const string ModVersion = "1.2.0";
 
         internal static double[] Weights = WeaponTierSystem.DefaultWeights;
         private Harmony harmony;
 
         private void Awake()
         {
-            ConfigEntry<string> weights = Config.Bind("Drops", "Weights", "70,20,7,2.5,0.5", "Relative weights: (Standard, Blessed, Hallowed, Sacred, Divine)");
+            ConfigEntry<string> weights = Config.Bind("Drops", "Weights", "70,20,7,2.5,0.5", "Relative weights: (Standard, Blessed, Hallowed, Sacred, Holy)");
             
             try
             {
@@ -41,6 +41,9 @@ namespace SulfurWeaponTiers
                 Weights = WeaponTierSystem.DefaultWeights;
                 Logger.LogWarning("Invalid tier weights, using defaults!" + ex.Message);
             }
+
+            ConfigureTierMultipliers();
+            SulfuriumTincture.Price = Config.Bind("UpgradeItem", "Price", 7500, new ConfigDescription($"Base shop price of the Sulfurium Tincture upgrade item", new AcceptableValueRange<int>(1, int.MaxValue))).Value;
 
             harmony = new Harmony("pseudotim.sulfur.weapontiers");
 
@@ -65,6 +68,32 @@ namespace SulfurWeaponTiers
             Logger.LogInfo($"{ ModName } { ModVersion } loaded!");
         }
 
+        private void ConfigureTierMultipliers()
+        {
+            for(int tier = 1; tier < WeaponTierSystem.Names.Length; tier++)
+            {
+                string section = "Tiers" + WeaponTierSystem.Names[tier];
+                WeaponTierSystem.DamageMultipliers[tier] = BindMultiplier(section, "Damage", WeaponTierSystem.DamageMultipliers[tier], "Base damage multiplier");
+                WeaponTierSystem.FireRateMultipliers[tier] = BindMultiplier(section, "FireRate", WeaponTierSystem.FireRateMultipliers[tier], "Base fire rate multiplier for firearms");
+                WeaponTierSystem.ReloadSpeedMultipliers[tier] = BindMultiplier(section, "ReloadSpeed", WeaponTierSystem.ReloadSpeedMultipliers[tier], "Reload speed multiplier for firearms (Higher values reload faster)");
+                WeaponTierSystem.DurabilityMultipliers[tier] = BindMultiplier(section, "MaxDurability", WeaponTierSystem.DurabilityMultipliers[tier], "Maximum durability multiplier");
+                WeaponTierSystem.PriceMultipliers[tier] = BindMultiplier(section, "Price", WeaponTierSystem.PriceMultipliers[tier], "Weapon price multiplier");
+            }
+        }
+
+        private float BindMultiplier(string section, string key, float defaultValue, string description)
+        {
+            ConfigEntry<float> entry = Config.Bind(section, key, defaultValue, new ConfigDescription(description, new AcceptableValueRange<float>(0.01f, float.MaxValue)));
+
+            if(float.IsNaN(entry.Value) || float.IsInfinity(entry.Value))
+            {
+                Logger.LogWarning($"Invalid {section}.{key} multiplier, using {defaultValue}!");
+                return defaultValue;
+            }
+
+            return entry.Value;
+        }
+
         private void Update()
         {
             TierGlint.Tick();
@@ -74,6 +103,7 @@ namespace SulfurWeaponTiers
         {
             harmony?.UnpatchSelf();
             TierGlint.Shutdown();
+            SulfuriumTincture.Shutdown();
         }
     }
 
@@ -99,6 +129,7 @@ namespace SulfurWeaponTiers
             }
             else
             {
+                // Treasure chests and loose drops both spawn fresh weapons here...
                 tier = WeaponTierSystem.Roll(Random.value, WeaponTiersPlugin.Weights);
 
                 if(tier == 0)
@@ -107,21 +138,8 @@ namespace SulfurWeaponTiers
                     return;
                 }
 
-                ItemStats itemStats = new ItemStats();
-                itemStats.SetBaseAttributes(weapon);
-                WeaponTierSystem.Apply(itemStats, tier);
-
-                int ammo = weapon.startsEmpty ? 0 : weapon.iAmmoMax;
-                ItemAttributeCollectionData attributes = itemStats.SerializedAttributeData();
-                ItemId[] attachments = Array.Empty<ItemId>();
-                ItemId[] contents = Array.Empty<ItemId>();
-                int width = item.inventorySize.x;
-                int height = item.inventorySize.y;
-
-                InventoryData invData = new InventoryData(item.id, 0, 0, 1, ammo, weapon.caliber, attributes, attachments, contents, 0, width, height);
-
                 // Let vanilla finish the spawn first...
-                SetData.Invoke(__instance, new object[] { invData });
+                SetData.Invoke(__instance, new object[] { WeaponTierSystem.CreateTieredWeaponData(weapon, tier) });
             }
 
             if(tier > 0 && __instance.itemText != null)
@@ -130,6 +148,44 @@ namespace SulfurWeaponTiers
             }
 
             TierGlint.ApplyPickup(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(InventoryItem), nameof(InventoryItem.Setup), new Type[]
+    {
+        typeof(Vector2), typeof(ItemDefinition), typeof(ItemGrid), typeof(int), typeof(int), typeof(InventoryData), typeof(bool)
+    })]
+    internal static class ShopWeaponTierPatch
+    {
+        static void Prefix(ItemDefinition item, ItemGrid containingGrid, ref InventoryData attachedData)
+        {
+            // Cached stock and sold weapons already have data, so leave their rolls alone...
+            if(attachedData != null || containingGrid == null || containingGrid.gridType != GridType.Store || !(item is WeaponSO weapon) || !WeaponTierSystem.Supports(weapon))
+            {
+                return;
+            }
+
+            int tier = WeaponTierSystem.Roll(Random.value, WeaponTiersPlugin.Weights);
+
+            if(tier > 0)
+            {
+                attachedData = WeaponTierSystem.CreateTieredWeaponData(weapon, tier);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(InventoryItem), nameof(InventoryItem.PriceBase), MethodType.Getter)]
+    internal static class TierPricePatch
+    {
+        static void Postfix(InventoryItem __instance, ref int __result)
+        {
+            if(!WeaponTierSystem.Supports(__instance.weaponDefinition))
+            {
+                return;
+            }
+
+            // Vanilla handles discounts and recorded transaction prices after this...
+            __result = WeaponTierSystem.ScalePrice(__result, WeaponTierSystem.Read(__instance.stats));
         }
     }
 
